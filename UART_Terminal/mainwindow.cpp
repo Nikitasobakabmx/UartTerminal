@@ -1,0 +1,178 @@
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+}
+
+
+void MainWindow::windowCreate(int x, int y)
+{
+    window = new QWidget;
+    window->resize(x,y);
+
+    hBox = new QHBoxLayout;
+
+    buttonBox = new QHBoxLayout;
+
+    textBox = new QHBoxLayout;
+
+    name = new QLabel("Set comPort Number");
+    hBox->addWidget(name);
+
+    QVBoxLayout *tmp = new QVBoxLayout();
+
+    setOfPort = new QLabel("Insert The setting of port\nName  Baudrate  Databits  Parity  StopBits  flowControl\n\COM6\t9600\t8\t0\t2\t0");
+    tmp->addWidget(setOfPort);
+
+    comPort = new QTextEdit;
+    //comPort->resize(75, 10);
+    tmp->addWidget(comPort);
+    buttonBox->addLayout(tmp);
+
+    conectButton = new QPushButton("conect UART");
+    buttonBox->addWidget(conectButton);
+    connect(conectButton, SIGNAL(released()), this, SLOT(ConnectHandle()));
+
+    sendButton = new QPushButton("Send");
+    buttonBox->addWidget(sendButton);
+    connect(sendButton, SIGNAL(released()), this, SLOT(sendHandle()));
+
+    status = new QLabel("Disconect");
+    buttonBox->addWidget(status);
+
+    sendText = new QLabel("Send The Text");
+
+    getText = new QLabel("Get The Text");
+
+    headLayot = new QHBoxLayout;
+    headLayot->addWidget(sendText);
+    headLayot->addWidget(getText);
+
+    sendTextBox = new QTextEdit;
+    //sendTextBox->resize(0.45 * x, 0.6 * y);
+
+    getTextBox = new QTextEdit;
+    //getTextBox->resize(.45 * x, 0.6 * y);
+
+    textBox->addWidget(sendTextBox);
+    textBox->addWidget(getTextBox);
+
+    layout = new QVBoxLayout;
+    layout->addLayout(hBox);
+    layout->addLayout(buttonBox);
+    layout->addLayout(headLayot);
+    layout->addLayout(textBox);
+
+    window->setLayout(layout);
+    window->show();
+}
+
+void MainWindow::setSetting(QString name,
+                             QSerialPort::BaudRate baudrate,
+                             QSerialPort::DataBits databits,
+                             QSerialPort::Parity parity,
+                             QSerialPort::StopBits stopBits,
+                             QSerialPort::FlowControl flowControl)
+{
+    setting = {name, baudrate, databits, parity,
+                stopBits, flowControl};
+    connectUART();
+}
+
+void MainWindow::connectUART()
+{
+    port = new QSerialPort(this);
+    port->setPortName(setting.name);
+    port->setBaudRate(setting.baudrate);
+    port->setDataBits(setting.databits);
+    port->setParity(setting.parity);
+    port->setStopBits(setting.stopBits);
+    port->setFlowControl(setting.flowControl);
+    if(port->open(QIODevice::ReadWrite))
+    {
+        status->setText("Connect");
+        connect(port, SIGNAL(channelBytesWritten()), this, SLOT(reqest()));
+    }
+    else
+        status->setText("Disconect");
+}
+
+void MainWindow::disconect()
+{
+    if(port->isOpen())
+        port->close();
+    delete port;
+    port = nullptr;
+    status->setText("Disconect");
+}
+
+void MainWindow::writeToPort()
+{
+    status->setText("Write");
+    port->write(sendTextBox->toPlainText().toUtf8());
+    status->setText("Conect");
+}
+
+void MainWindow::readPort()
+{
+    status->setText("Read");
+    QByteArray arr = port->readAll();
+    status->setText("Conect");
+    getTextBox->setText(QString::fromUtf8(arr));
+}
+
+void MainWindow::TranslateBox()
+{
+    QString stringa = comPort->toPlainText();
+    if(stringa == nullptr)
+    {
+    status->setText("Default Connect");
+    setSetting("COM6",
+                QSerialPort::Baud9600,
+                QSerialPort::Data8,
+                QSerialPort:: NoParity,
+                QSerialPort::TwoStop,
+                QSerialPort::NoFlowControl);
+        return;
+    }
+    QStringList listStringa = stringa.split(" ");
+    setting.name = listStringa[0];
+    setSetting(setting.name,
+                QSerialPort::Baud9600,
+                QSerialPort::Data8,
+                QSerialPort:: NoParity,
+                QSerialPort::TwoStop,
+                QSerialPort::NoFlowControl);
+}
+
+void MainWindow::ConnectHandle()
+{
+    if(port == nullptr)
+        TranslateBox();
+    else
+        disconect();
+}
+
+void MainWindow::sendHandle()
+{
+    if(sendTextBox->toPlainText() == nullptr)
+        return;
+    writeToPort();
+    sendTextBox->clear();
+    readPort();
+}
+
+void MainWindow::reqest()
+{
+    readPort();
+}
+
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
