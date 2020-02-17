@@ -1,0 +1,26 @@
+#ifndef UARTSETTING_H
+#define UARTSETTING_H
+
+
+//next delete
+#include <string>
+#include <QtSerialPort>
+
+
+
+class UartSetting
+{
+    private:
+        settingPort setting;
+        QSerialPort *port = NULL;
+    public:
+        UartSetting();
+        void setting();
+        bool connect();
+        bool disconect();
+        std::string read();
+        bool write();
+        ~UartSetting();
+};
+
+#endif // UARTSETTING_H
